@@ -19,13 +19,13 @@ class mqtt_helper:
 
     def connect_mqtt(self, broker, port, client_id, username=None, password=None):
 
-        def on_connect(self, client, userdata, flags, rc):
+        def on_connect(client, userdata, flags, rc):
             if rc == 0:
                 print("Connected to MQTT Broker!")
             else:
                 print("Failed to connect, return code %d\n", rc)
 
-        def on_disconnect(self, client, userdata, rc):
+        def on_disconnect(client, userdata, rc):
             _LOGGER.info("Disconnected with result code: %s", rc)
             reconnect_count, reconnect_delay = 0, self.first_reconnect_delay
             while reconnect_count < self.max_reconnect_count:
