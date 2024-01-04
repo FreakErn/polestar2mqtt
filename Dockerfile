@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Clone the Git repository
 RUN apt-get update && apt-get install -y git
-RUN git clone https://github.com/FreakErn/polestar2mqtt.git . \
+RUN git clone https://github.com/FreakErn/polestar2mqtt.git /app \
     && ls -las . \
     && pip install --no-cache-dir -r requirements.txt \
     && git clone --branch 1.1.1 https://github.com/leeyuentuen/pypolestar.git
