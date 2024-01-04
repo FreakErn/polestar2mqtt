@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+import asyncio
+import logging
+import logging.config
+import json
+
+from lib.argparselib import get_args
+from lib.mqtt_helper import mqtt_helper
+from pypolestar.pypolestar.polestar import PolestarApi
+
+_LOGGER = logging.getLogger(__name__)
+
+POST_HEADER_JSON = {"Content-Type": "application/json"}
+
+
+polestar_api = None
+
+def flatten_dict(d, parent_key='', sep='_'):
+    items = []
+    for k, v in d.items():
+        new_key = k
+        if isinstance(v, dict):
+            items.extend(flatten_dict(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
+
+def get_clean_output_values(data):
+    _LOGGER.info(data)
+    unneded_entries = ['__typename', 'angles', 'code', 'iso', 'unix']
+    
+    data['batteryEventUpdated'] = data['getBatteryData']['data']['eventUpdatedTimestamp']['iso']
+    data['odoEventUpdated'] = data['getOdometerData']['data']['eventUpdatedTimestamp']['iso']
+    
+    data = {key: value for key, value in flatten_dict(data).items() if key not in unneded_entries}
+
+    data['odometerKm'] = data['odometerMeters'] / 1000
+
+    return data
+
+
+async def fetch(vin):
+    await polestar_api.get_ev_data(vin)
+    return dict(sorted(get_clean_output_values(polestar_api.cache_data).items()))
+
+
+async def main():
+    global polestar_api
+    args = get_args()
+    loglevel = logging.WARNING
+    if not args.debug and args.verbose:
+        print('Verbose mode enabled')
+        loglevel = logging.INFO
+    if args.debug:
+        print('Debug mode enabled')
+        loglevel = logging.DEBUG
+    logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', level=loglevel)
+
+    polestar_mqtt_helper = mqtt_helper()
+
+    polestar_api = PolestarApi(args.polestar_email, args.polestar_password)
+    await polestar_api.init()
+
+    polestar_mqtt_helper.connect_mqtt(args.mqtt_host, args.mqtt_port, args.mqtt_client_id, args.mqtt_user, args.mqtt_password)
+    _LOGGER.info("Connected successfully to %s:%s", args.mqtt_host, args.mqtt_port)
+    _LOGGER.info("MQTT Topic is: %s", args.mqtt_topic)
+
+    vin = polestar_api.get_cache_data('getConsumerCarsV2', 'vin', True)
+    _LOGGER.info("Running for VIN: " + str(vin))
+
+    while True:
+        ev_data = await fetch(vin)
+        polestar_mqtt_helper.send_data(args.mqtt_topic, ev_data, mqtt_cache=args.mqtt_cache, mqtt_single=args.mqtt_single, mqtt_single_separator=args.mqtt_single_separator)
+        await asyncio.sleep(10)
+    
+if __name__ == '__main__':
+    asyncio.run(main())
