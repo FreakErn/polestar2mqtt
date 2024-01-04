@@ -25,7 +25,7 @@ def flatten_dict(d, parent_key='', sep='_'):
     return dict(items)
 
 def get_clean_output_values(data):
-    _LOGGER.info(data)
+    _LOGGER.debug(data)
     unneded_data_keys = ['__typename', 'angles', 'code', 'iso', 'unix']
     
     data['batteryUpdated'] = data['getBatteryData']['data']['eventUpdatedTimestamp']['iso']
@@ -33,7 +33,9 @@ def get_clean_output_values(data):
     
     data = {key: value for key, value in flatten_dict(data).items() if key not in unneded_data_keys}
 
-    data['odometerKm'] = data['odometerMeters'] / 1000
+    data['odometerKm'] = data['odometerMeters'] / 1000 # add km entry
+
+    data['lastRequestTimestamp'] = data.pop('timestamp') # rename timestamp to lastRequestTimestamp
 
     return data
 
@@ -53,7 +55,8 @@ async def main():
     if args.debug:
         print('Debug mode enabled')
         loglevel = logging.DEBUG
-    logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', level=loglevel)
+    logging.basicConfig(format='%(asctime)s %(module)s %(levelname)s: %(message)s', level=loglevel)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
 
     polestar_mqtt_helper = mqtt_helper()
 
