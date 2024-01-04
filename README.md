@@ -16,11 +16,23 @@ $ ./polestar2mqtt -s -c --polestar-email "email@example.com" --polestar-password
 (*notes* adding the pypolestar to the requirements did not work)
 
 #### Docker
-@TBD
+```docker
+docker run --restart=unless-stopped \
+  --name polestar2mqtt \
+  -e POLESTAR2MQTT_POLESTAR_EMAIL=my-polestar-email@example.com \
+  -e POLESTAR2MQTT_POLESTAR_PASSWORD=my-secure-password \
+  -e POLESTAR2MQTT_MQTT_HOST=mqtt.local \
+  -e POLESTAR2MQTT_MQTT_SINGLE=1 \
+  -e POLESTAR2MQTT_MQTT_CACHE=1 \
+  -e POLESTAR2MQTT_VERBOSE=1 \
+  freakern/polestar2mqtt:latest
+```
+
+I recommend using the "single" and the "cache" parameter, then each value will be send individually.
 
 ## Help
 
-#### Shell Parameter
+#### Shell Parameter (--help)
 ```shell
 usage: POLESTAR2MQTT [-h] [-d] [-v] --polestar-email POLESTAR_EMAIL [--polestar-password POLESTAR_PASSWORD] [-i REQUEST_INTERVAL] [-s] [--mqtt-single-separator MQTT_SINGLE_SEPARATOR] [-c] [--mqtt-host MQTT_HOST] [--mqtt-port MQTT_PORT] [--mqtt-topic MQTT_TOPIC]
                      [--mqtt-client-id MQTT_CLIENT_ID] [--mqtt-user MQTT_USER] [--mqtt-password MQTT_PASSWORD]
@@ -67,7 +79,7 @@ MQTT:
 | POLESTAR2MQTT_DEBUG                   | Enable Debug Mode                                                                                         | False            | False    |
 | POLESTAR2MQTT_VERBOSE                 | Enable Verbose Mode                                                                                       | False            | False    |
 | POLESTAR2MQTT_POLESTAR_EMAIL          | Polestar email                                                                                            |                  | True     |
-| POLESTAR2MQTT_POLESTAR_PASS           | Polestar Password                                                                                         |                  | True     |
+| POLESTAR2MQTT_POLESTAR_PASSWORD       | Polestar Password                                                                                         |                  | True     |
 | POLESTAR2MQTT_REQUEST_INTERVAL        | The request interval                                                                                      |                  | False    |
 | POLESTAR2MQTT_MQTT_SINGLE             | Send each value individually to the MQTT Broker                                                           | False            | False    |
 | POLESTAR2MQTT_MQTT_SINGLE_SEPARATOR   | Separator for the single (-s) parameter. If it is a slash, you\'ll be able to subscripe just to subtopics | /                | False    |
