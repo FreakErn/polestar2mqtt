@@ -87,4 +87,4 @@ class mqtt_helper:
                     _LOGGER.debug("Found %s in cache, skip!", topic_to_use)
         else:
             _LOGGER.debug(data_to_send)
-            self.mqttclient.publish(base_topic, json.dumps(data_to_send))
+            self.mqttclient.publish(base_topic, json.dumps(data_to_send, default=str))
