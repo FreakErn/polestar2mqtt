@@ -32,7 +32,7 @@ def get_args():
                               required=not os.environ.get(key='POLESTAR2MQTT_POLESTAR_PASSWORD')
                               )
     polestar_group.add_argument('-i', '--request-interval',
-                              default=os.environ.get(key='POLESTAR2MQTT_REQUEST_INTERVAL') or 60,
+                              default=os.environ.get(key='POLESTAR2MQTT_REQUEST_INTERVAL') or 10,
                               dest='request_interval',
                               help='The request interval',
                               type=int

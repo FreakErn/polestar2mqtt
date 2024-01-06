@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 import asyncio
+import httpx
 import logging
 import logging.config
-import json
+
 
 from lib.argparselib import get_args
 from lib.mqtt_helper import mqtt_helper
@@ -44,6 +45,19 @@ async def fetch(vin):
     await polestar_api.get_ev_data(vin)
     return dict(sorted(get_clean_output_values(polestar_api.cache_data).items()))
 
+async def init():
+    try:
+        await polestar_api.init()
+        return True
+    except httpx.ConnectTimeout as e:
+        _LOGGER.warning("Connection Timeout on init data %s", str(e))
+    except httpx.ConnectError as e:
+        _LOGGER.warning("Connection Error on init data %s", str(e))
+    except httpx.ReadTimeout as e:
+        _LOGGER.warning("Read Timeout on init data %s", str(e))
+    except Exception as e:
+        _LOGGER.error("Unexpected Error on init data %s", str(e))
+    return False
 
 async def main():
     global polestar_api
@@ -55,17 +69,17 @@ async def main():
     if args.debug:
         print('Debug mode enabled')
         loglevel = logging.DEBUG
-    logging.basicConfig(format='%(asctime)s %(module)s %(levelname)s: %(message)s', level=loglevel)
+    logging.basicConfig(format='%(asctime)s %(name)s %(levelname)s: %(message)s', level=loglevel)
     logging.getLogger("httpx").setLevel(logging.WARNING)
 
     polestar_mqtt_helper = mqtt_helper()
 
     polestar_api = PolestarApi(args.polestar_email, args.polestar_password)
-    await polestar_api.init()
-    vin = polestar_api.get_cache_data('getConsumerCarsV2', 'vin', True)
-    if vin is None:
-        _LOGGER.error("Could not find a vehicle, maybe you should check your credentials!")
+    initialized = await init()
+    if not initialized:
+        _LOGGER.error("Could not initialize Polestar API!")
         exit()
+    vin = polestar_api.get_cache_data('getConsumerCarsV2', 'vin', True)
     _LOGGER.info("Running for VIN: " + str(vin))
 
     polestar_mqtt_helper.connect_mqtt(args.mqtt_host, args.mqtt_port, args.mqtt_client_id, args.mqtt_user, args.mqtt_password)
@@ -74,9 +88,21 @@ async def main():
 
 
     while True:
-        ev_data = await fetch(vin)
-        polestar_mqtt_helper.send_data(args.mqtt_topic, ev_data, mqtt_cache=args.mqtt_cache, mqtt_single=args.mqtt_single, mqtt_single_separator=args.mqtt_single_separator)
-        await asyncio.sleep(10)
+        try:
+            ev_data = await fetch(vin)
+        except httpx.ConnectTimeout as e:
+            _LOGGER.warning("Connection Timeout on update data %s", str(e))
+        except httpx.ConnectError as e:
+            _LOGGER.warning("Connection Error on update data %s", str(e))
+        except httpx.ReadTimeout as e:
+            _LOGGER.warning("Read Timeout on update data %s", str(e))
+        except Exception as e:
+            _LOGGER.error("Unexpected Error on update data %s", str(e))
+        else:
+            polestar_mqtt_helper.send_data(args.mqtt_topic, ev_data, mqtt_cache=args.mqtt_cache, mqtt_single=args.mqtt_single, mqtt_single_separator=args.mqtt_single_separator)
+
+        await asyncio.sleep(args.request_interval)
+
     
 if __name__ == '__main__':
     asyncio.run(main())
