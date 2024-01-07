@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import asyncio
+import datetime
 import httpx
 import logging
 import logging.config
@@ -36,7 +37,8 @@ def get_clean_output_values(data):
 
     data['odometerKm'] = data['odometerMeters'] / 1000 # add km entry
 
-    data['lastRequestTimestamp'] = data.pop('timestamp') # rename timestamp to lastRequestTimestamp
+    data['lastRequestTimestamp'] = datetime.datetime.now()
+    del data['timestamp']
 
     return data
 
